@@ -1,6 +1,5 @@
 'use client';
 
-import { upload } from '@vercel/blob/client';
 import { CheckCircle2, ImagePlus, Loader2, Save } from 'lucide-react';
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { compressImage } from '@/lib/clientImage';
@@ -46,9 +45,15 @@ export default function UploadClient() {
     try {
       const compressed = await compressImage(file);
       setPreview(URL.createObjectURL(compressed));
-      const blob = await upload(`screenshots/${Date.now()}-${compressed.name}`, compressed, {
-        access: 'public',
-        handleUploadUrl: '/api/blob'
+      const formData = new FormData();
+      formData.append('file', compressed);
+      const blob = await fetch('/api/blob/server', {
+        method: 'POST',
+        body: formData
+      }).then(async (res) => {
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.message || '图片上传失败');
+        return json as { url: string };
       });
       const ocr = await fetch('/api/ocr', {
         method: 'POST',

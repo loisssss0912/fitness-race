@@ -2,6 +2,13 @@ import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return NextResponse.json(
+      { message: '缺少 BLOB_READ_WRITE_TOKEN，请先在 Vercel Storage 创建 Blob，并把 token 配到 .env.local 或 Vercel 环境变量。' },
+      { status: 400 }
+    );
+  }
+
   const body = (await request.json()) as HandleUploadBody;
 
   try {
