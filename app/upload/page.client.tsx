@@ -4,10 +4,11 @@ import { upload } from '@vercel/blob/client';
 import { CheckCircle2, ImagePlus, Loader2, Save } from 'lucide-react';
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { compressImage } from '@/lib/clientImage';
+import { participants as defaultParticipants } from '@/lib/users';
 import type { OcrDraft, Participant, WorkoutRecord } from '@/types/workout';
 
 export default function UploadClient() {
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>(defaultParticipants);
   const [userId, setUserId] = useState('u_001');
   const [nickname, setNickname] = useState('木子');
   const [invite, setInvite] = useState('');
@@ -18,13 +19,22 @@ export default function UploadClient() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/participants').then((res) => res.json()).then((data) => setParticipants(data.participants));
+    fetch('/api/participants')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.participants) && data.participants.length) {
+          setParticipants(data.participants);
+        }
+      })
+      .catch(() => setParticipants(defaultParticipants));
   }, []);
 
   function pickUser(id: string) {
     const user = participants.find((item) => item.user_id === id);
     setUserId(id);
-    setNickname(user?.nickname ?? nickname);
+    const nextNickname = user?.nickname ?? nickname;
+    setNickname(nextNickname);
+    setDraft((current) => (current ? { ...current, user_id: id, nickname: nextNickname } : current));
   }
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
@@ -87,6 +97,22 @@ export default function UploadClient() {
             {participants.map((item) => <option key={item.user_id} value={item.user_id}>{item.nickname}</option>)}
           </select>
           <input className="input" placeholder="邀请码，可选" value={invite} onChange={(event) => setInvite(event.target.value)} />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {participants.map((item) => (
+            <button
+              key={item.user_id}
+              type="button"
+              onClick={() => pickUser(item.user_id)}
+              className={`rounded-full border px-3 py-2 text-sm font-black transition ${
+                userId === item.user_id
+                  ? 'border-[#ffd166]/60 bg-[#ffd166]/18 text-[#ffe08a] shadow-lg shadow-[#ffd166]/10'
+                  : 'border-white/10 bg-white/7 text-white/70 hover:bg-white/12'
+              }`}
+            >
+              {item.nickname}
+            </button>
+          ))}
         </div>
         <label className="mt-5 flex min-h-[310px] cursor-pointer flex-col items-center justify-center rounded-[28px] border border-dashed border-white/18 bg-white/6 p-6 text-center transition hover:border-blue-400/50 hover:bg-blue-500/8">
           {preview ? <img src={preview} alt="运动截图预览" className="max-h-[360px] rounded-[28px] object-contain shadow-2xl" /> : (
