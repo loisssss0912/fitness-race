@@ -1,0 +1,267 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #05070d;
+  color: white;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-[28px] border border-white/10 bg-white/8 shadow-2xl shadow-black/30 backdrop-blur-2xl;
+  }
+
+  .input {
+    @apply w-full rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-white outline-none transition placeholder:text-white/35 focus:border-ocean focus:ring-4 focus:ring-blue-500/15;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-ocean px-5 py-3 font-semibold text-white shadow-glow transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/8 px-5 py-3 font-semibold text-white transition hover:bg-white/12;
+  }
+
+  .risk {
+    @apply border-red-400/40 bg-red-500/12;
+  }
+
+  .poop-feed {
+    width: 104px;
+    height: 54px;
+    animation: poop-feed 3.2s cubic-bezier(.22,.75,.22,1) infinite;
+    filter: drop-shadow(0 8px 14px rgba(0,0,0,.54));
+    transform-origin: 18px 15px;
+  }
+
+  .poop-feed-spoon {
+    position: absolute;
+    left: 56px;
+    top: 13px;
+    display: block;
+    font-size: 34px;
+    transform: rotate(-18deg);
+  }
+
+  .poop-feed-pile {
+    position: absolute;
+    left: 0;
+    top: 2px;
+    display: block;
+    width: 54px;
+    height: 42px;
+    animation: poop-bounce .52s ease-in-out infinite alternate;
+  }
+
+  .poop-feed-poop {
+    position: absolute;
+    left: 9px;
+    top: 5px;
+    display: block;
+    font-size: 31px;
+  }
+
+  .poop-feed-poop-extra {
+    left: 0;
+    top: 18px;
+    font-size: 25px;
+    transform: translateY(8px) rotate(-12deg);
+  }
+
+  .poop-feed-poop-third {
+    left: 25px;
+    top: 17px;
+    font-size: 24px;
+    transform: translate(-2px, -8px) rotate(10deg);
+  }
+
+  .rank-first {
+    box-shadow: inset 0 0 0 1px rgba(255, 209, 102, .22), 0 18px 55px rgba(255, 209, 102, .12);
+  }
+
+  .champion-avatar::before {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border-radius: 9999px;
+    background:
+      radial-gradient(circle at 50% 50%, transparent 48%, rgba(255,255,255,.95) 50%, transparent 53%),
+      conic-gradient(from 140deg, #ffd166, #ff8fab, #7dd3fc, #86efac, #ffd166);
+    animation: champion-frame-pop 1.25s cubic-bezier(.34,1.56,.64,1) infinite;
+    filter: drop-shadow(0 0 16px rgba(255, 209, 102, .52));
+  }
+
+  .champion-avatar::after {
+    content: "";
+    position: absolute;
+    inset: -15px;
+    border-radius: 9999px;
+    background:
+      radial-gradient(circle at 50% 50%, transparent 58%, rgba(255, 209, 102, .55) 60%, transparent 63%),
+      radial-gradient(circle at 18% 20%, rgba(255,255,255,.95) 0 3px, transparent 4px),
+      radial-gradient(circle at 82% 26%, rgba(125,211,252,.95) 0 3px, transparent 4px),
+      radial-gradient(circle at 76% 82%, rgba(249,168,212,.95) 0 3px, transparent 4px),
+      radial-gradient(circle at 20% 78%, rgba(134,239,172,.95) 0 3px, transparent 4px);
+    animation: champion-frame-breathe 1.25s ease-in-out infinite;
+  }
+
+  .champion-avatar > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .champion-burst {
+    pointer-events: none;
+    position: absolute;
+    left: 88px;
+    top: 23px;
+    z-index: 0;
+    width: 46px;
+    height: 46px;
+  }
+
+  .champion-burst span {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 5px;
+    height: 5px;
+    border-radius: 9999px;
+    background: #ffd166;
+    box-shadow: 0 0 12px rgba(255, 209, 102, .62);
+    animation: champion-spark 1.25s ease-out infinite;
+  }
+
+  .champion-burst span:nth-child(2) {
+    background: #7dd3fc;
+    animation-delay: .14s;
+  }
+
+  .champion-burst span:nth-child(3) {
+    background: #f9a8d4;
+    animation-delay: .28s;
+  }
+
+  .champion-burst span:nth-child(4) {
+    background: #86efac;
+    animation-delay: .42s;
+  }
+
+  .rank-badge::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, rgba(255,255,255,.34), transparent 48%);
+    opacity: .62;
+  }
+
+  .feed-target {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    opacity: 0;
+  }
+}
+
+@keyframes poop-feed {
+  0% {
+    transform: translate(0, 0) rotate(-12deg) scale(.72);
+    opacity: 0;
+  }
+  12% {
+    opacity: .95;
+  }
+  46% {
+    transform: translate(calc(var(--feed-x) * .52), calc(var(--feed-y) * .54)) rotate(9deg) scale(1);
+  }
+  82% {
+    transform: translate(var(--feed-x), var(--feed-y)) rotate(-3deg) scale(1.06);
+    opacity: .95;
+  }
+  88% {
+    transform: translate(var(--feed-x), var(--feed-y)) rotate(-15deg) scale(1.12);
+  }
+  100% {
+    transform: translate(var(--feed-x), var(--feed-y)) rotate(-3deg) scale(.65);
+    opacity: 0;
+  }
+}
+
+@keyframes poop-bounce {
+  to {
+    transform: translateY(-2px) rotate(6deg);
+  }
+}
+
+@keyframes champion-frame-pop {
+  0% {
+    transform: scale(.94);
+    opacity: .84;
+  }
+  42% {
+    transform: scale(1.14);
+    opacity: 1;
+  }
+  72% {
+    transform: scale(1.03);
+    opacity: .96;
+  }
+  100% {
+    transform: scale(.94);
+    opacity: .84;
+  }
+}
+
+@keyframes champion-frame-breathe {
+  0%, 100% {
+    transform: scale(.88);
+    opacity: .28;
+  }
+  48% {
+    transform: scale(1.22);
+    opacity: .82;
+  }
+}
+
+@keyframes champion-spark {
+  0% {
+    transform: translate(-50%, -50%) scale(.2);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--spark-x, 18px)), calc(-50% + var(--spark-y, -18px))) scale(.9);
+    opacity: 0;
+  }
+}
+
+.champion-burst span:nth-child(1) {
+  --spark-x: -18px;
+  --spark-y: -20px;
+}
+
+.champion-burst span:nth-child(2) {
+  --spark-x: 22px;
+  --spark-y: -14px;
+}
+
+.champion-burst span:nth-child(3) {
+  --spark-x: -20px;
+  --spark-y: 20px;
+}
+
+.champion-burst span:nth-child(4) {
+  --spark-x: 21px;
+  --spark-y: 18px;
+}
