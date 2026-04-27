@@ -93,26 +93,10 @@ export default function UploadClient() {
       <section className="panel p-5">
         <h2 className="text-xl font-black">选择身份</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <select className="input" value={userId} onChange={(event) => pickUser(event.target.value)}>
+          <select className="input select-gold" value={userId} onChange={(event) => pickUser(event.target.value)}>
             {participants.map((item) => <option key={item.user_id} value={item.user_id}>{item.nickname}</option>)}
           </select>
           <input className="input" placeholder="邀请码，可选" value={invite} onChange={(event) => setInvite(event.target.value)} />
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {participants.map((item) => (
-            <button
-              key={item.user_id}
-              type="button"
-              onClick={() => pickUser(item.user_id)}
-              className={`rounded-full border px-3 py-2 text-sm font-black transition ${
-                userId === item.user_id
-                  ? 'border-[#ffd166]/60 bg-[#ffd166]/18 text-[#ffe08a] shadow-lg shadow-[#ffd166]/10'
-                  : 'border-white/10 bg-white/7 text-white/70 hover:bg-white/12'
-              }`}
-            >
-              {item.nickname}
-            </button>
-          ))}
         </div>
         <label className="mt-5 flex min-h-[310px] cursor-pointer flex-col items-center justify-center rounded-[28px] border border-dashed border-white/18 bg-white/6 p-6 text-center transition hover:border-blue-400/50 hover:bg-blue-500/8">
           {preview ? <img src={preview} alt="运动截图预览" className="max-h-[360px] rounded-[28px] object-contain shadow-2xl" /> : (
