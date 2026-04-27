@@ -1,6 +1,6 @@
 'use client';
 
-export async function compressImage(file: File, maxWidth = 1600, quality = 0.82) {
+export async function compressImage(file: File, maxWidth = 1100, quality = 0.72) {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, maxWidth / bitmap.width);
   const canvas = document.createElement('canvas');

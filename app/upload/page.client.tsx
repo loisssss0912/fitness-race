@@ -6,6 +6,16 @@ import { compressImage } from '@/lib/clientImage';
 import { participants as defaultParticipants } from '@/lib/users';
 import type { OcrDraft, Participant, WorkoutRecord } from '@/types/workout';
 
+async function readJson<T>(response: Response, fallbackMessage: string): Promise<T> {
+  const text = await response.text();
+  const json = text ? JSON.parse(text) : {};
+  if (!response.ok) {
+    const message = typeof json.message === 'string' ? json.message : `${fallbackMessage}，状态码 ${response.status}`;
+    throw new Error(message);
+  }
+  return json as T;
+}
+
 export default function UploadClient() {
   const [participants, setParticipants] = useState<Participant[]>(defaultParticipants);
   const [userId, setUserId] = useState('u_001');
@@ -50,16 +60,12 @@ export default function UploadClient() {
       const blob = await fetch('/api/blob/server', {
         method: 'POST',
         body: formData
-      }).then(async (res) => {
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.message || '图片上传失败');
-        return json as { url: string };
-      });
+      }).then((res) => readJson<{ url: string }>(res, '图片上传失败'));
       const ocr = await fetch('/api/ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blobUrl: blob.url, user_id: userId, nickname })
-      }).then((res) => res.json());
+      }).then((res) => readJson<OcrDraft>(res, 'OCR 识别失败'));
       setDraft(ocr);
     } catch (err) {
       setError(err instanceof Error ? err.message : '上传失败');
@@ -83,8 +89,7 @@ export default function UploadClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(draft)
       });
-      const json = await response.json();
-      if (!response.ok) throw new Error(json.message || '提交失败');
+      const json = await readJson<WorkoutRecord>(response, '提交失败');
       setSaved(json);
     } catch (err) {
       setError(err instanceof Error ? err.message : '提交失败');
