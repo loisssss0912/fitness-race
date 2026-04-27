@@ -43,13 +43,50 @@ async function feishuRequest<T>(method: 'get' | 'post', path: string, data?: unk
   return response.data;
 }
 
+function dateToTimestamp(date: string) {
+  return new Date(`${date}T00:00:00+08:00`).getTime();
+}
+
+function dateTimeToTimestamp(value: string) {
+  return new Date(value).getTime();
+}
+
+function timestampToDate(value: unknown) {
+  if (typeof value === 'number') return new Date(value).toISOString().slice(0, 10);
+  return String(value ?? '');
+}
+
+function timestampToISOString(value: unknown) {
+  if (typeof value === 'number') return new Date(value).toISOString();
+  return String(value ?? '');
+}
+
+function normalizeDeviceSource(value: string) {
+  if (value.includes('Apple') || value.includes('苹果')) return '苹果';
+  if (value.includes('华为')) return '华为';
+  if (value.includes('小米')) return '小米';
+  if (value.includes('微信')) return '微信运动';
+  if (value.includes('Keep')) return 'Keep';
+  return '其他';
+}
+
+function parseRiskFlags(value: unknown) {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  const raw = String(value ?? '');
+  return raw ? raw.split(',').map((item) => item.trim()).filter(Boolean) : [];
+}
+
 function toFields(record: WorkoutRecord) {
+  const now = new Date().toISOString();
+  const riskLevel = record.risk_flags.length ? '异常' : '正常';
+
   return {
     record_key: record.record_key,
     user_id: record.user_id,
     nickname: record.nickname,
-    date: record.date,
-    device_source: record.device_source,
+    date: dateToTimestamp(record.date),
+    submit_date: dateToTimestamp(now.slice(0, 10)),
+    device_source: normalizeDeviceSource(record.device_source),
     steps: record.steps,
     calories: record.calories,
     duration_min: record.duration_min,
@@ -60,21 +97,23 @@ function toFields(record: WorkoutRecord) {
     raw_ocr_text: record.raw_ocr_text,
     confirmed: record.confirmed,
     is_makeup: record.is_makeup,
-    risk_flags: record.risk_flags.join(', '),
+    risk_flags: record.risk_flags,
+    risk_level: riskLevel,
     admin_status: record.admin_status,
-    created_at: record.created_at
+    created_at: dateTimeToTimestamp(record.created_at),
+    updated_at: dateTimeToTimestamp(now)
   };
 }
 
 function fromFeishuRecord(item: { record_id: string; fields: Record<string, unknown> }): WorkoutRecord {
   const f = item.fields;
-  const riskRaw = String(f.risk_flags ?? '');
+  const riskFlags = parseRiskFlags(f.risk_flags);
   return {
     id: item.record_id,
     record_key: String(f.record_key ?? ''),
     user_id: String(f.user_id ?? ''),
     nickname: String(f.nickname ?? ''),
-    date: String(f.date ?? ''),
+    date: timestampToDate(f.date),
     device_source: String(f.device_source ?? ''),
     steps: Number(f.steps ?? 0),
     calories: Number(f.calories ?? 0),
@@ -86,9 +125,9 @@ function fromFeishuRecord(item: { record_id: string; fields: Record<string, unkn
     raw_ocr_text: String(f.raw_ocr_text ?? ''),
     confirmed: Boolean(f.confirmed),
     is_makeup: Boolean(f.is_makeup),
-    risk_flags: riskRaw ? riskRaw.split(',').map((item) => item.trim()).filter(Boolean) : [],
+    risk_flags: riskFlags,
     admin_status: String(f.admin_status ?? '正常') as WorkoutRecord['admin_status'],
-    created_at: String(f.created_at ?? '')
+    created_at: timestampToISOString(f.created_at)
   };
 }
 
