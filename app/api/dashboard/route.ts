@@ -24,19 +24,42 @@ function bestPerUser(records: WorkoutRecord[]) {
 }
 
 function cumulativeRanking(records: WorkoutRecord[]) {
-  const map = new Map<string, WorkoutRecord>();
+  const map = new Map<string, WorkoutRecord & { created_at: string }>();
   for (const record of records) {
     const current = map.get(record.user_id);
-    if (!current) map.set(record.user_id, { ...record });
-    else {
+    if (!current) {
+      map.set(record.user_id, {
+        ...record,
+        id: `total_${record.user_id}`,
+        record_key: `total_${record.user_id}`,
+        screenshot_url: '',
+        raw_ocr_text: '',
+        risk_flags: [...new Set(record.risk_flags)]
+      });
+    } else {
       current.steps += record.steps;
       current.calories += record.calories;
       current.duration_min += record.duration_min;
       current.distance_km = Math.round((current.distance_km + record.distance_km) * 10) / 10;
       current.score = Math.round((current.score + record.score) * 10) / 10;
+      current.risk_flags = [...new Set([...current.risk_flags, ...record.risk_flags])];
+      if (record.created_at > current.created_at) {
+        current.date = record.date;
+        current.weight = record.weight;
+        current.created_at = record.created_at;
+      }
     }
   }
-  return [...map.values()].sort((a, b) => b.score - a.score);
+  return [...map.values()]
+    .map((record) => ({
+      ...record,
+      steps: Math.round(record.steps),
+      calories: Math.round(record.calories),
+      duration_min: Math.round(record.duration_min),
+      distance_km: Math.round(record.distance_km * 10) / 10,
+      score: Math.round(record.score * 10) / 10
+    }))
+    .sort((a, b) => b.score - a.score);
 }
 
 export async function GET() {
