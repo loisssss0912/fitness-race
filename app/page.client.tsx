@@ -132,7 +132,7 @@ export default function DashboardClient() {
       <section className="grid gap-5 lg:grid-cols-3">
         <Ranking title="今日排行榜" records={data?.todayRanking ?? []} />
         <Ranking title="本周排行榜" records={data?.weekRanking ?? []} />
-        <Ranking title="累计排行榜" records={data?.weekRanking ?? []} />
+        <Ranking title="累计排行榜" records={data?.totalRanking ?? []} />
       </section>
     </div>
   );

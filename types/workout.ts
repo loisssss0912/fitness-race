@@ -52,5 +52,5 @@ export type DashboardResponse = {
   today: string;
   todayRanking: WorkoutRecord[];
   weekRanking: WorkoutRecord[];
-  streakRanking: Array<Participant & { streak: number }>;
+  totalRanking: WorkoutRecord[];
 };

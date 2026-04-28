@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { startOfWeek, todayInShanghai } from '@/lib/dates';
 import { feishu } from '@/lib/feishu';
-import { participants } from '@/lib/users';
 import type { DashboardResponse, WorkoutRecord } from '@/types/workout';
 
 const DASHBOARD_CACHE_MS = 60_000;
@@ -40,17 +39,6 @@ function cumulativeRanking(records: WorkoutRecord[]) {
   return [...map.values()].sort((a, b) => b.score - a.score);
 }
 
-function streakForUser(records: WorkoutRecord[], userId: string) {
-  const dates = new Set(records.filter((record) => record.user_id === userId).map((record) => record.date));
-  let count = 0;
-  const cursor = new Date(`${todayInShanghai()}T00:00:00+08:00`);
-  while (dates.has(cursor.toISOString().slice(0, 10))) {
-    count += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return count;
-}
-
 export async function GET() {
   const now = Date.now();
   if (cachedDashboard && cachedDashboard.expiresAt > now) {
@@ -63,22 +51,12 @@ export async function GET() {
 
   const todayRows = rows.filter((record) => record.date === today);
   const weekRows = rows.filter((record) => record.date >= weekStart);
-  const userMap = new Map(participants.map((user) => [user.user_id, user]));
-  for (const record of rows) {
-    if (!userMap.has(record.user_id)) {
-      userMap.set(record.user_id, { user_id: record.user_id, nickname: record.nickname });
-    }
-  }
-
-  const streakRanking = [...userMap.values()]
-    .map((user) => ({ ...user, streak: streakForUser(rows, user.user_id) }))
-    .sort((a, b) => b.streak - a.streak);
 
   const data = {
     today,
     todayRanking: bestPerUser(todayRows),
     weekRanking: cumulativeRanking(weekRows),
-    streakRanking
+    totalRanking: cumulativeRanking(rows)
   };
 
   cachedDashboard = {
