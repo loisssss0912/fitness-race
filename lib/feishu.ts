@@ -129,6 +129,56 @@ function textField(value: unknown) {
   return String(value ?? '');
 }
 
+function numberField(value: unknown, fallback = 0) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function nullableNumberField(value: unknown) {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function firstText(...values: unknown[]) {
+  for (const value of values) {
+    const text = textField(value).trim();
+    if (text) return text;
+  }
+  return '';
+}
+
+type RawOcrJson = {
+  steps?: unknown;
+  calories?: unknown;
+  duration_min?: unknown;
+  distance_km?: unknown;
+  weight?: unknown;
+  date?: unknown;
+  device_source?: unknown;
+};
+
+function parseRawOcrJson(value: unknown): RawOcrJson | null {
+  const raw = textField(value).trim();
+  if (!raw) return null;
+
+  const unfenced = raw
+    .replace(/```json/gi, '```')
+    .replace(/```/g, '')
+    .trim();
+  const start = unfenced.indexOf('{');
+  const end = unfenced.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+
+  try {
+    const parsed = JSON.parse(unfenced.slice(start, end + 1));
+    return parsed && typeof parsed === 'object' ? parsed as RawOcrJson : null;
+  } catch {
+    return null;
+  }
+}
+
 function fromFeishuRecord(item: { record_id: string; fields: Record<string, unknown> }): WorkoutRecord {
   const f = item.fields;
   const riskFlags = parseRiskFlags(f.risk_flags);
@@ -156,10 +206,11 @@ function fromFeishuRecord(item: { record_id: string; fields: Record<string, unkn
 }
 
 function ocrDraftFromFields(recordId: string, fields: Record<string, unknown>): OcrDraft | null {
-  const steps = Number(fields.ocr_steps ?? fields.steps ?? 0);
-  const calories = Number(fields.ocr_calories ?? fields.calories ?? 0);
-  const duration = Number(fields.ocr_duration_min ?? fields.duration_min ?? 0);
-  const distance = Number(fields.ocr_distance_km ?? fields.distance_km ?? 0);
+  const rawJson = parseRawOcrJson(fields.raw_ocr_text);
+  const steps = numberField(fields.ocr_steps, numberField(rawJson?.steps, numberField(fields.steps)));
+  const calories = numberField(fields.ocr_calories, numberField(rawJson?.calories, numberField(fields.calories)));
+  const duration = numberField(fields.ocr_duration_min, numberField(rawJson?.duration_min, numberField(fields.duration_min)));
+  const distance = numberField(fields.ocr_distance_km, numberField(rawJson?.distance_km, numberField(fields.distance_km)));
   const hasCoreMetrics = steps > 0 || calories > 0 || duration > 0 || distance > 0;
   if (!hasCoreMetrics) return null;
 
@@ -167,13 +218,13 @@ function ocrDraftFromFields(recordId: string, fields: Record<string, unknown>): 
     draft_record_id: recordId,
     user_id: textField(fields.user_id),
     nickname: textField(fields.nickname),
-    date: timestampToDate(fields.ocr_date ?? fields.date) || todayInShanghai(),
-    device_source: textField(fields.ocr_device_source ?? fields.device_source) || '其他',
+    date: firstText(timestampToDate(fields.ocr_date ?? fields.date), rawJson?.date, todayInShanghai()),
+    device_source: firstText(fields.ocr_device_source, rawJson?.device_source, fields.device_source, '其他'),
     steps,
     calories,
     duration_min: duration,
     distance_km: distance,
-    weight: fields.ocr_weight === undefined || fields.ocr_weight === null || fields.ocr_weight === '' ? null : Number(fields.ocr_weight),
+    weight: nullableNumberField(fields.ocr_weight) ?? nullableNumberField(rawJson?.weight) ?? nullableNumberField(fields.weight),
     screenshot_url: textField(fields.screenshot_url),
     raw_ocr_text: textField(fields.raw_ocr_text),
     ocr_status: textField(fields.ocr_status) === '识别失败' ? '识别失败' : '已识别'

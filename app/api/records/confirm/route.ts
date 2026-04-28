@@ -17,8 +17,7 @@ const schema = z.object({
   distance_km: z.coerce.number().nonnegative(),
   weight: z.coerce.number().positive().optional().nullable(),
   screenshot_url: z.string().optional().default(''),
-  raw_ocr_text: z.string().optional().default('')
-  ,
+  raw_ocr_text: z.string().optional().default(''),
   draft_record_id: z.string().optional()
 });
 

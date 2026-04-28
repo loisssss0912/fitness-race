@@ -8,7 +8,7 @@
 - 用户选择昵称或输入邀请码
 - 每天上传运动截图
 - 客户端先压缩图片，再上传到飞书多维表格附件字段
-- 飞书多维表格 OCR / 智能提取字段写入 `ocr_*` 结果后，前端进入确认页
+- 飞书多维表格 AI 图片理解字段写入 `raw_ocr_text` JSON 后，前端进入确认页
 - 点击确认后才写入飞书多维表格
 - 首页展示今日排行榜、本周排行榜、连续打卡榜
 - 个人页展示步数、热量、体重趋势
@@ -88,7 +88,24 @@ ocr_device_source
 ```
 
 `admin_status` 建议设为单选：`正常`、`已修正`、`剔除`。
-`screenshot_attachment` 是附件字段。飞书 OCR / 智能提取需要在多维表格里配置为读取这个附件字段，并把结果写入 `ocr_*` 字段。
+`screenshot_attachment` 是附件字段。推荐把 `raw_ocr_text` 配成飞书「AI 图片理解」字段，原图引用 `screenshot_attachment`，并要求只返回 JSON。`ocr_*` 字段可以保留；如果为空，应用会自动从 `raw_ocr_text` 的 JSON 中解析。
+
+`raw_ocr_text` 推荐提示词：
+
+```txt
+请识别截图中的运动数据，并只返回 JSON，不要解释，不要 Markdown。
+
+返回字段：
+{
+  "steps": 步数，数字，没有则填 0,
+  "calories": 消耗热量，数字，单位 kcal，没有则填 0,
+  "duration_min": 运动时长，数字，单位分钟，没有则填 0,
+  "distance_km": 距离，数字，单位 km，没有则填 0,
+  "weight": 体重，数字，没有则填 null,
+  "date": "YYYY-MM-DD"，没有则填空字符串,
+  "device_source": "微信运动/苹果/华为/小米/Keep/其他"
+}
+```
 
 ## 环境变量
 
