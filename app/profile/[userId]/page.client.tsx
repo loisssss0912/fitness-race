@@ -9,6 +9,33 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { participants as defaultParticipants } from '@/lib/users';
 import type { Participant, WorkoutRecord } from '@/types/workout';
 
+const IDENTITY_CACHE_KEY = 'fitness_race_identity';
+
+function readCachedIdentity(participants: Participant[]) {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(IDENTITY_CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as { user_id?: string; invite_code?: string };
+    return participants.find((item) => (
+      item.user_id === cached.user_id &&
+      item.invite_code &&
+      item.invite_code.toUpperCase() === cached.invite_code?.toUpperCase()
+    )) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function cacheIdentity(user: Participant) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(IDENTITY_CACHE_KEY, JSON.stringify({
+    user_id: user.user_id,
+    nickname: user.nickname,
+    invite_code: user.invite_code
+  }));
+}
+
 export default function ProfileClient({ userId }: { userId: string }) {
   const router = useRouter();
   const [records, setRecords] = useState<WorkoutRecord[]>([]);
@@ -27,12 +54,27 @@ export default function ProfileClient({ userId }: { userId: string }) {
     fetch('/api/participants')
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data.participants) && data.participants.length) {
-          setParticipants(data.participants);
+        const nextParticipants = Array.isArray(data.participants) && data.participants.length ? data.participants : defaultParticipants;
+        setParticipants(nextParticipants);
+        const cached = readCachedIdentity(nextParticipants);
+        if (cached) {
+          setInvite(cached.invite_code ?? '');
+          if (cached.user_id !== userId) {
+            router.replace(`/profile/${cached.user_id}`);
+          }
         }
       })
-      .catch(() => setParticipants(defaultParticipants));
-  }, []);
+      .catch(() => {
+        setParticipants(defaultParticipants);
+        const cached = readCachedIdentity(defaultParticipants);
+        if (cached) {
+          setInvite(cached.invite_code ?? '');
+          if (cached.user_id !== userId) {
+            router.replace(`/profile/${cached.user_id}`);
+          }
+        }
+      });
+  }, [router, userId]);
 
   function applyInvite() {
     const code = invite.trim().toUpperCase();
@@ -43,6 +85,7 @@ export default function ProfileClient({ userId }: { userId: string }) {
       return;
     }
     setInviteError('');
+    cacheIdentity(user);
     router.push(`/profile/${user.user_id}`);
   }
 

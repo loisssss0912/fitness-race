@@ -25,10 +25,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-4 sm:px-6 lg:px-8">
             <header className="mb-5 flex items-center justify-between rounded-[28px] border border-white/10 bg-white/8 px-4 py-3 shadow-2xl shadow-black/20 backdrop-blur-2xl">
               <Link href="/" className="flex items-center gap-3">
-                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-lg font-black text-slate-950">垃</div>
+                <div
+                  className="h-11 w-11 overflow-hidden rounded-2xl border border-white/15 bg-cover bg-center shadow-lg shadow-black/30 ring-1 ring-white/10"
+                  style={{ backgroundImage: "url('/hero-bg.png')" }}
+                  aria-hidden="true"
+                />
                 <div>
                   <h1 className="text-xl font-black tracking-wide sm:text-2xl">谁是垃圾</h1>
-                  <p className="text-xs text-white/50">Workout Ranking</p>
+                  <p className="text-xs font-black tracking-[0.18em] text-amber-200/80">WHO IS RUBBISH!!!</p>
                 </div>
               </Link>
               <nav className="flex rounded-[18px] bg-white/8 p-1">

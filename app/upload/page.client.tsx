@@ -6,6 +6,8 @@ import { compressImage } from '@/lib/clientImage';
 import { participants as defaultParticipants } from '@/lib/users';
 import type { OcrDraft, OcrStartResponse, OcrStatusResponse, Participant, WorkoutRecord } from '@/types/workout';
 
+const IDENTITY_CACHE_KEY = 'fitness_race_identity';
+
 async function readJson<T>(response: Response, fallbackMessage: string): Promise<T> {
   const text = await response.text();
   const json = text ? JSON.parse(text) : {};
@@ -14,6 +16,31 @@ async function readJson<T>(response: Response, fallbackMessage: string): Promise
     throw new Error(message);
   }
   return json as T;
+}
+
+function readCachedIdentity(participants: Participant[]) {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(IDENTITY_CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as { user_id?: string; invite_code?: string };
+    return participants.find((item) => (
+      item.user_id === cached.user_id &&
+      item.invite_code &&
+      item.invite_code.toUpperCase() === cached.invite_code?.toUpperCase()
+    )) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function cacheIdentity(user: Participant) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(IDENTITY_CACHE_KEY, JSON.stringify({
+    user_id: user.user_id,
+    nickname: user.nickname,
+    invite_code: user.invite_code
+  }));
 }
 
 export default function UploadClient() {
@@ -33,12 +60,25 @@ export default function UploadClient() {
     fetch('/api/participants')
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data.participants) && data.participants.length) {
-          setParticipants(data.participants);
-        }
+        const nextParticipants = Array.isArray(data.participants) && data.participants.length ? data.participants : defaultParticipants;
+        setParticipants(nextParticipants);
+        const cached = readCachedIdentity(nextParticipants);
+        if (cached) unlockIdentity(cached);
       })
-      .catch(() => setParticipants(defaultParticipants));
+      .catch(() => {
+        setParticipants(defaultParticipants);
+        const cached = readCachedIdentity(defaultParticipants);
+        if (cached) unlockIdentity(cached);
+      });
   }, []);
+
+  function unlockIdentity(user: Participant) {
+    setUserId(user.user_id);
+    setNickname(user.nickname);
+    setIdentityUnlocked(true);
+    setInvite(user.invite_code ?? '');
+    setDraft((current) => (current ? { ...current, user_id: user.user_id, nickname: user.nickname } : current));
+  }
 
   function applyInvite() {
     const code = invite.trim().toUpperCase();
@@ -49,10 +89,8 @@ export default function UploadClient() {
       return;
     }
     setError('');
-    setUserId(user.user_id);
-    setNickname(user.nickname);
-    setIdentityUnlocked(true);
-    setDraft((current) => (current ? { ...current, user_id: user.user_id, nickname: user.nickname } : current));
+    unlockIdentity(user);
+    cacheIdentity(user);
   }
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {

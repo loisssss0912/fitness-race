@@ -54,6 +54,30 @@ const rankStyles: Array<{ row: string; badge: string; score: string; label: stri
   }
 ];
 
+const middleRankLabels = [
+  '卷王预备',
+  '燃脂机器',
+  '暴汗选手',
+  '步数刺客',
+  '热量杀手',
+  '跑到冒烟',
+  '有点东西',
+  '不服来战',
+  '差点封神',
+  '还在输出',
+  '继续加码',
+  '别停下来',
+  '今日狠活',
+  '快追上了',
+  '明天再卷'
+];
+
+function getRankLabel(index: number, total: number) {
+  if (index === 0) return '冠军';
+  if (total > 1 && index === total - 1) return '你是垃圾';
+  return middleRankLabels[(index - 1) % middleRankLabels.length];
+}
+
 export default function DashboardClient() {
   const [data, setData] = useState<DashboardResponse | null>(null);
 
@@ -194,6 +218,7 @@ function Ranking({ title, records }: { title: string; records: WorkoutRecord[] }
           const rankStyle = rankStyles[index % rankStyles.length];
           const isFirst = index === 0;
           const isLast = records.length > 1 && index === records.length - 1;
+          const rankLabel = getRankLabel(index, records.length);
           return (
             <Link
               key={`${record.record_key}-${index}`}
@@ -221,7 +246,7 @@ function Ranking({ title, records }: { title: string; records: WorkoutRecord[] }
               {isLast && (
                 <>
                   <div className="feed-target absolute left-[84px] top-1/2 z-30 -translate-y-1/2" data-feed-target="true" aria-hidden="true" />
-                  <div className="absolute right-3 top-2 rounded-full border border-white/10 bg-white/6 px-2 py-0.5 text-[10px] font-black text-white/45">最后一名</div>
+                  <div className="absolute right-3 top-2 rounded-full border border-rose-300/25 bg-rose-400/12 px-2 py-0.5 text-[10px] font-black text-rose-100/75">你是垃圾</div>
                 </>
               )}
               <div className={`rank-badge relative grid h-12 w-12 place-items-center rounded-2xl border text-base font-black shadow-lg ${rankStyle.badge}`}>
@@ -233,7 +258,13 @@ function Ranking({ title, records }: { title: string; records: WorkoutRecord[] }
               <div className="relative min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="truncate font-black text-white">{record.nickname}</p>
-                  <span className="rounded-full border border-white/12 bg-white/10 px-2 py-0.5 text-[10px] font-black text-white/65">{rankStyle.label}</span>
+                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${
+                    isFirst
+                      ? 'border-amber-200/40 bg-amber-300/16 text-amber-100'
+                      : isLast
+                      ? 'border-rose-300/30 bg-rose-400/14 text-rose-100'
+                      : 'border-white/12 bg-white/10 text-white/65'
+                  }`}>{rankLabel}</span>
                 </div>
                 <p className="text-xs text-white/50">{record.steps.toLocaleString()} 步 · {record.calories} kcal · {record.duration_min} 分钟</p>
               </div>
