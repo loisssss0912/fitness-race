@@ -89,7 +89,7 @@ function toFields(record: WorkoutRecord) {
   const now = new Date().toISOString();
   const riskLevel = record.risk_flags.length ? '异常' : '正常';
 
-  return {
+  const fields: Record<string, unknown> = {
     record_key: record.record_key,
     user_id: record.user_id,
     nickname: record.nickname,
@@ -102,7 +102,6 @@ function toFields(record: WorkoutRecord) {
     distance_km: record.distance_km,
     weight: record.weight ?? null,
     score: record.score,
-    screenshot_url: record.screenshot_url,
     confirmed: record.confirmed,
     is_makeup: record.is_makeup,
     risk_flags: record.risk_flags,
@@ -111,6 +110,9 @@ function toFields(record: WorkoutRecord) {
     created_at: dateTimeToTimestamp(record.created_at),
     updated_at: dateTimeToTimestamp(now)
   };
+
+  if (record.screenshot_url) fields.screenshot_url = record.screenshot_url;
+  return fields;
 }
 
 function toConfirmFields(record: WorkoutRecord) {
@@ -335,7 +337,6 @@ export const feishu = {
       date: dateToTimestamp(today),
       submit_date: dateToTimestamp(today),
       screenshot_attachment: [{ file_token: fileToken, name: input.file.name }],
-      screenshot_url: '',
       confirmed: false,
       is_makeup: false,
       risk_flags: [],
