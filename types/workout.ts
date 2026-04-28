@@ -3,6 +3,7 @@ export type AdminStatus = '正常' | '已修正' | '剔除';
 export type Participant = {
   user_id: string;
   nickname: string;
+  invite_code?: string;
 };
 
 export type WorkoutRecord = {

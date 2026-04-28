@@ -18,9 +18,10 @@ async function readJson<T>(response: Response, fallbackMessage: string): Promise
 
 export default function UploadClient() {
   const [participants, setParticipants] = useState<Participant[]>(defaultParticipants);
-  const [userId, setUserId] = useState('u_001');
-  const [nickname, setNickname] = useState('木子');
+  const [userId, setUserId] = useState('');
+  const [nickname, setNickname] = useState('');
   const [invite, setInvite] = useState('');
+  const [identityUnlocked, setIdentityUnlocked] = useState(false);
   const [preview, setPreview] = useState('');
   const [draft, setDraft] = useState<OcrDraft | null>(null);
   const [loading, setLoading] = useState(false);
@@ -39,17 +40,29 @@ export default function UploadClient() {
       .catch(() => setParticipants(defaultParticipants));
   }, []);
 
-  function pickUser(id: string) {
-    const user = participants.find((item) => item.user_id === id);
-    setUserId(id);
-    const nextNickname = user?.nickname ?? nickname;
-    setNickname(nextNickname);
-    setDraft((current) => (current ? { ...current, user_id: id, nickname: nextNickname } : current));
+  function applyInvite() {
+    const code = invite.trim().toUpperCase();
+    if (!code) return;
+    const user = participants.find((item) => item.invite_code?.toUpperCase() === code);
+    if (!user) {
+      setError('邀请码不正确，请确认后再试。');
+      return;
+    }
+    setError('');
+    setUserId(user.user_id);
+    setNickname(user.nickname);
+    setIdentityUnlocked(true);
+    setDraft((current) => (current ? { ...current, user_id: user.user_id, nickname: user.nickname } : current));
   }
 
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (!identityUnlocked || !userId || !nickname) {
+      setError('请先输入邀请码解锁身份，再上传截图。');
+      event.target.value = '';
+      return;
+    }
     setLoading(true);
     setOcrMessage('正在上传到飞书多维表格...');
     setError('');
@@ -132,12 +145,20 @@ export default function UploadClient() {
   return (
     <div className="grid gap-5 lg:grid-cols-[.85fr_1.15fr]">
       <section className="panel p-5">
-        <h2 className="text-xl font-black">选择身份</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <select className="input select-gold" value={userId} onChange={(event) => pickUser(event.target.value)}>
-            {participants.map((item) => <option key={item.user_id} value={item.user_id}>{item.nickname}</option>)}
-          </select>
-          <input className="input" placeholder="邀请码，可选" value={invite} onChange={(event) => setInvite(event.target.value)} />
+        <h2 className="text-xl font-black">验证身份</h2>
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_210px]">
+          <div className="flex min-w-0 gap-2">
+            <input className="input" placeholder="输入邀请码" value={invite} onChange={(event) => setInvite(event.target.value)} onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                applyInvite();
+              }
+            }} />
+            <button type="button" className="btn-secondary w-28 shrink-0 px-4" onClick={applyInvite}>验证</button>
+          </div>
+          <div className={`input flex items-center ${identityUnlocked ? 'select-gold' : 'text-white/35'}`}>
+            {identityUnlocked ? nickname : '输入邀请码后显示身份'}
+          </div>
         </div>
         <label className="mt-5 flex min-h-[310px] cursor-pointer flex-col items-center justify-center rounded-[28px] border border-dashed border-white/18 bg-white/6 p-6 text-center transition hover:border-blue-400/50 hover:bg-blue-500/8">
           {preview ? <img src={preview} alt="运动截图预览" className="max-h-[360px] rounded-[28px] object-contain shadow-2xl" /> : (

@@ -83,7 +83,7 @@ export default function DashboardClient() {
 
   return (
     <div className="space-y-5">
-      <section className="panel relative min-h-[360px] overflow-hidden p-6" style={{ background: "linear-gradient(90deg, rgba(0,0,0,.82), rgba(0,0,0,.22), rgba(0,0,0,.72)), url('/hero-bg.png') center / cover no-repeat, url('/fight-bg.svg') center / cover no-repeat" }}>
+      <section className="panel relative min-h-[360px] overflow-hidden p-6" style={{ background: "linear-gradient(90deg, rgba(0,0,0,.72), rgba(0,0,0,.18), rgba(0,0,0,.58)), url('/hero-bg.png') center / cover no-repeat" }}>
         <div className="relative max-w-2xl pt-24 sm:pt-28">
           <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-lime-400/16 px-3 py-1 text-sm font-semibold text-lime-100 ring-1 ring-lime-300/20">
             <Sparkles size={15} />

@@ -8,6 +8,7 @@ const config = {
   appSecret: process.env.FEISHU_APP_SECRET,
   appToken: process.env.FEISHU_APP_TOKEN,
   tableId: process.env.FEISHU_TABLE_ID,
+  usersTableId: process.env.FEISHU_USERS_TABLE_ID ?? 'tbl4WeaP8Y5Vr4e3',
   useMock: process.env.USE_MOCK_FEISHU === 'true'
 };
 
@@ -213,6 +214,16 @@ function fromFeishuRecord(item: { record_id: string; fields: Record<string, unkn
   };
 }
 
+function fromFeishuUser(item: { record_id: string; fields: Record<string, unknown> }) {
+  const f = item.fields;
+  return {
+    user_id: textField(f.user_id),
+    nickname: textField(f.nickname),
+    invite_code: textField(f.invite_code),
+    is_active: Boolean(f.is_active)
+  };
+}
+
 function ocrDraftFromFields(recordId: string, fields: Record<string, unknown>): OcrDraft | null {
   const rawJson = parseRawOcrJson(fields.raw_ocr_text);
   const steps = numberField(rawJson?.steps, numberField(fields.steps));
@@ -240,6 +251,27 @@ function ocrDraftFromFields(recordId: string, fields: Record<string, unknown>): 
 
 export const feishu = {
   isMock: useMock,
+
+  async listParticipants() {
+    if (useMock) {
+      const { participants } = await import('./users');
+      return participants;
+    }
+
+    const result = await feishuRequest<{
+      code: number;
+      msg?: string;
+      data: {
+        items: Array<{ record_id: string; fields: Record<string, unknown> }>;
+      };
+    }>('get', `/bitable/v1/apps/${config.appToken}/tables/${config.usersTableId}/records?page_size=100`);
+
+    if (result.code !== 0) throw new Error(`Feishu list users error: ${result.msg || result.code}`);
+    return result.data.items
+      .map(fromFeishuUser)
+      .filter((user) => user.user_id && user.nickname && user.is_active)
+      .map(({ user_id, nickname, invite_code }) => ({ user_id, nickname, invite_code }));
+  },
 
   async listRecords(): Promise<WorkoutRecord[]> {
     if (useMock) return mockStore.listRecords();

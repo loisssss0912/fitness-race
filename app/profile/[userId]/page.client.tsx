@@ -2,18 +2,49 @@
 
 import type { EChartsOption } from 'echarts';
 import { Activity, Flame, Footprints, Weight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Chart } from '@/components/Chart';
 import { UserAvatar } from '@/components/UserAvatar';
-import type { WorkoutRecord } from '@/types/workout';
+import { participants as defaultParticipants } from '@/lib/users';
+import type { Participant, WorkoutRecord } from '@/types/workout';
 
 export default function ProfileClient({ userId }: { userId: string }) {
+  const router = useRouter();
   const [records, setRecords] = useState<WorkoutRecord[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>(defaultParticipants);
+  const [invite, setInvite] = useState('');
+  const [inviteError, setInviteError] = useState('');
   const latest = records[records.length - 1];
+  const currentUser = participants.find((item) => item.user_id === userId);
+  const displayName = latest?.nickname ?? currentUser?.nickname ?? userId;
 
   useEffect(() => {
     fetch(`/api/profile/${userId}`).then((res) => res.json()).then((data) => setRecords(data.records));
   }, [userId]);
+
+  useEffect(() => {
+    fetch('/api/participants')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.participants) && data.participants.length) {
+          setParticipants(data.participants);
+        }
+      })
+      .catch(() => setParticipants(defaultParticipants));
+  }, []);
+
+  function applyInvite() {
+    const code = invite.trim().toUpperCase();
+    if (!code) return;
+    const user = participants.find((item) => item.invite_code?.toUpperCase() === code);
+    if (!user) {
+      setInviteError('邀请码不正确，请确认后再试。');
+      return;
+    }
+    setInviteError('');
+    router.push(`/profile/${user.user_id}`);
+  }
 
   const option = useMemo<EChartsOption>(() => {
     const dates = records.map((item) => item.date.slice(5));
@@ -46,11 +77,31 @@ export default function ProfileClient({ userId }: { userId: string }) {
   return (
     <div className="space-y-5">
       <section className="panel p-6">
-        <div className="flex items-center gap-4">
-          <UserAvatar name={latest?.nickname ?? userId} size="lg" />
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
+            <UserAvatar name={displayName} size="lg" />
+            <div>
+              <p className="text-sm text-ocean">个人战绩</p>
+              <h2 className="text-4xl font-black">{displayName}</h2>
+            </div>
+          </div>
           <div>
-            <p className="text-sm text-ocean">个人战绩</p>
-            <h2 className="text-4xl font-black">{latest?.nickname ?? userId}</h2>
+            <div className="flex gap-2">
+              <input
+                className="input min-w-[240px]"
+                placeholder="输入邀请码切换用户"
+                value={invite}
+                onChange={(event) => setInvite(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    applyInvite();
+                  }
+                }}
+              />
+              <button type="button" className="btn-secondary shrink-0" onClick={applyInvite}>切换</button>
+            </div>
+            {inviteError && <p className="mt-2 text-sm text-red-300">{inviteError}</p>}
           </div>
         </div>
       </section>

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 const nav = [
   { href: '/', label: '榜单', icon: Home },
   { href: '/upload', label: '上传', icon: UploadCloud },
-  { href: '/profile/u_001', label: '个人', icon: BarChart3 },
+  { href: '/profile/u_demo_tyson', label: '个人', icon: BarChart3 },
   { href: '/admin', label: '核对', icon: Shield }
 ];
 

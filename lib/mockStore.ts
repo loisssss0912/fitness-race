@@ -15,6 +15,14 @@ const base = [
   ['u_007', '老邢', 11380, 390, 56, 7.9, 86.5]
 ] as const;
 
+const tysonBase = [
+  ['2026-04-24', 38888, 1880, 132, 25.8, 99.8],
+  ['2026-04-25', 45210, 2160, 156, 31.4, 98.9],
+  ['2026-04-26', 49999, 2390, 188, 35.2, 97.7],
+  ['2026-04-27', 62000, 3100, 240, 42.0, 96.2],
+  [today, 88888, 5200, 360, 58.6, 94.8]
+] as const;
+
 const records: WorkoutRecord[] = base.map(([user_id, nickname, steps, calories, duration_min, distance_km, weight], index) => {
   const record = {
     id: `mock_${user_id}_${today}`,
@@ -60,6 +68,31 @@ for (let i = 1; i <= 8; i += 1) {
     };
     records.push({ ...record, score: calculateScore(record) });
   }
+}
+
+for (const [date, steps, calories, duration_min, distance_km, weight] of tysonBase) {
+  const record = {
+    id: `mock_u_demo_tyson_${date}`,
+    record_key: makeRecordKey('u_demo_tyson', date),
+    user_id: 'u_demo_tyson',
+    nickname: '拳王泰森',
+    date,
+    device_source: '其他',
+    steps,
+    calories,
+    duration_min,
+    distance_km,
+    weight,
+    screenshot_url: '',
+    raw_ocr_text: 'mock tyson seed',
+    confirmed: true,
+    is_makeup: false,
+    risk_flags: ['步数超过5万', '热量超过2000kcal'],
+    admin_status: '正常' as const,
+    created_at: new Date(`${date}T22:30:00+08:00`).toISOString(),
+    score: 0
+  };
+  records.push({ ...record, score: calculateScore(record) });
 }
 
 export const mockStore = {
