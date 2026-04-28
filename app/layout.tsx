@@ -27,7 +27,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <Link href="/" className="flex items-center gap-3">
                 <div
                   className="h-11 w-11 overflow-hidden rounded-2xl border border-white/15 bg-cover bg-center shadow-lg shadow-black/30 ring-1 ring-white/10"
-                  style={{ backgroundImage: "url('/hero-bg.png')" }}
+                  style={{ backgroundImage: "url('/hero-bg.jpg')" }}
                   aria-hidden="true"
                 />
                 <div>

@@ -1,5 +1,5 @@
 把“谁是垃圾”版块的底图保存为：
 
-public/hero-bg.png
+public/hero-bg.jpg
 
-页面会优先使用 hero-bg.png；如果这个文件不存在，会自动回退到 fight-bg.svg。
+首页和顶部图标都使用 hero-bg.jpg。为了手机打开更快，图片应尽量控制在 500KB 以内。

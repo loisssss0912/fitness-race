@@ -4,7 +4,7 @@ import type { EChartsOption } from 'echarts';
 import { Activity, Flame, Footprints, Weight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { Chart } from '@/components/Chart';
+import { LazyChart } from '@/components/LazyChart';
 import { UserAvatar } from '@/components/UserAvatar';
 import { participants as defaultParticipants } from '@/lib/users';
 import type { Participant, WorkoutRecord } from '@/types/workout';
@@ -158,7 +158,7 @@ export default function ProfileClient({ userId }: { userId: string }) {
           <h3 className="text-lg font-black">趋势曲线</h3>
           <Activity className="text-ocean" />
         </div>
-        <Chart option={option} className="h-[430px]" />
+        <LazyChart option={option} className="h-[430px]" delayMs={900} />
       </section>
     </div>
   );

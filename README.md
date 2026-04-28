@@ -35,6 +35,7 @@ app/
   upload/page.tsx
 components/
   Chart.tsx
+  LazyChart.tsx
   UserAvatar.tsx
 lib/
   clientImage.ts
@@ -48,8 +49,7 @@ lib/
 types/
   workout.ts
 public/
-  hero-bg.png
-  fight-bg.svg
+  hero-bg.jpg
 ```
 
 ## 飞书字段

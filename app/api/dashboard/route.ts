@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server';
 import { startOfWeek, todayInShanghai } from '@/lib/dates';
 import { feishu } from '@/lib/feishu';
 import { participants } from '@/lib/users';
-import type { WorkoutRecord } from '@/types/workout';
+import type { DashboardResponse, WorkoutRecord } from '@/types/workout';
+
+const DASHBOARD_CACHE_MS = 60_000;
+let cachedDashboard: { data: DashboardResponse; expiresAt: number } | null = null;
+
+const cacheHeaders = {
+  'Cache-Control': 's-maxage=60, stale-while-revalidate=300'
+};
 
 function valid(record: WorkoutRecord) {
   return record.confirmed && record.admin_status !== '剔除';
@@ -45,6 +52,11 @@ function streakForUser(records: WorkoutRecord[], userId: string) {
 }
 
 export async function GET() {
+  const now = Date.now();
+  if (cachedDashboard && cachedDashboard.expiresAt > now) {
+    return NextResponse.json(cachedDashboard.data, { headers: cacheHeaders });
+  }
+
   const rows = (await feishu.listRecords()).filter(valid);
   const today = todayInShanghai();
   const weekStart = startOfWeek(today);
@@ -62,10 +74,17 @@ export async function GET() {
     .map((user) => ({ ...user, streak: streakForUser(rows, user.user_id) }))
     .sort((a, b) => b.streak - a.streak);
 
-  return NextResponse.json({
+  const data = {
     today,
     todayRanking: bestPerUser(todayRows),
     weekRanking: cumulativeRanking(weekRows),
     streakRanking
-  });
+  };
+
+  cachedDashboard = {
+    data,
+    expiresAt: now + DASHBOARD_CACHE_MS
+  };
+
+  return NextResponse.json(data, { headers: cacheHeaders });
 }

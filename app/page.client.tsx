@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { Activity, Sparkles, Trophy } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Chart } from '@/components/Chart';
+import { LazyChart } from '@/components/LazyChart';
 import { UserAvatar } from '@/components/UserAvatar';
 import type { DashboardResponse, WorkoutRecord } from '@/types/workout';
 
@@ -107,7 +107,7 @@ export default function DashboardClient() {
 
   return (
     <div className="space-y-5">
-      <section className="panel relative min-h-[360px] overflow-hidden p-6" style={{ background: "linear-gradient(90deg, rgba(0,0,0,.72), rgba(0,0,0,.18), rgba(0,0,0,.58)), url('/hero-bg.png') center / cover no-repeat" }}>
+      <section className="panel relative min-h-[360px] overflow-hidden p-6" style={{ background: "linear-gradient(90deg, rgba(0,0,0,.72), rgba(0,0,0,.18), rgba(0,0,0,.58)), url('/hero-bg.jpg') center / cover no-repeat" }}>
         <div className="relative max-w-2xl pt-24 sm:pt-28">
           <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-lime-400/16 px-3 py-1 text-sm font-semibold text-lime-100 ring-1 ring-lime-300/20">
             <Sparkles size={15} />
@@ -126,7 +126,7 @@ export default function DashboardClient() {
           <h2 className="text-lg font-black text-white">今日消耗：热量 / 时长 / 步数</h2>
           <Activity className="text-coral" size={22} />
         </div>
-        <Chart option={dailyOption} className="h-80" />
+        <LazyChart option={dailyOption} className="h-80" delayMs={900} />
       </section>
 
       <section className="grid gap-5 lg:grid-cols-3">
@@ -246,7 +246,6 @@ function Ranking({ title, records }: { title: string; records: WorkoutRecord[] }
               {isLast && (
                 <>
                   <div className="feed-target absolute left-[84px] top-1/2 z-30 -translate-y-1/2" data-feed-target="true" aria-hidden="true" />
-                  <div className="absolute right-3 top-2 rounded-full border border-rose-300/25 bg-rose-400/12 px-2 py-0.5 text-[10px] font-black text-rose-100/75">你是垃圾</div>
                 </>
               )}
               <div className={`rank-badge relative grid h-12 w-12 place-items-center rounded-2xl border text-base font-black shadow-lg ${rankStyle.badge}`}>
