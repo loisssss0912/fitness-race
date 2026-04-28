@@ -30,7 +30,23 @@ export type WorkoutRecord = {
 export type OcrDraft = Omit<
   WorkoutRecord,
   'id' | 'record_key' | 'score' | 'confirmed' | 'is_makeup' | 'risk_flags' | 'admin_status' | 'created_at'
->;
+> & {
+  draft_record_id?: string;
+  ocr_status?: '待识别' | '已识别' | '识别失败' | 'mock';
+};
+
+export type OcrStartResponse = {
+  recordId: string;
+  status: string;
+  draft?: OcrDraft;
+};
+
+export type OcrStatusResponse = {
+  recordId: string;
+  status: 'pending' | 'ready' | 'failed';
+  message?: string;
+  draft?: OcrDraft;
+};
 
 export type DashboardResponse = {
   today: string;

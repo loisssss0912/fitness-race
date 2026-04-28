@@ -16,8 +16,10 @@ const schema = z.object({
   duration_min: z.coerce.number().nonnegative(),
   distance_km: z.coerce.number().nonnegative(),
   weight: z.coerce.number().positive().optional().nullable(),
-  screenshot_url: z.string().url(),
+  screenshot_url: z.string().optional().default(''),
   raw_ocr_text: z.string().optional().default('')
+  ,
+  draft_record_id: z.string().optional()
 });
 
 export async function POST(request: Request) {
@@ -25,7 +27,7 @@ export async function POST(request: Request) {
   const recordKey = makeRecordKey(input.user_id, input.date);
   const existing = await feishu.findByRecordKey(recordKey);
 
-  if (existing) {
+  if (existing && existing.id !== input.draft_record_id) {
     return NextResponse.json({ message: '今天已经提交过，不能重复提交。', existing }, { status: 409 });
   }
 
@@ -42,6 +44,8 @@ export async function POST(request: Request) {
     created_at: new Date().toISOString()
   };
 
-  const saved = await feishu.createRecord(record);
+  const saved = input.draft_record_id
+    ? await feishu.updateRecord(input.draft_record_id, record)
+    : await feishu.createRecord(record);
   return NextResponse.json(saved, { status: 201 });
 }

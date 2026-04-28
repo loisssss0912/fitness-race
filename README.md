@@ -1,4 +1,4 @@
-# 谁是垃圾：Next.js + 飞书多维表格 + Vercel Blob
+# 谁是垃圾：Next.js + 飞书多维表格
 
 这是一个可部署到 GitHub + Vercel 的运动截图打卡 MVP。
 
@@ -7,8 +7,8 @@
 - 微信内打开 Vercel 链接
 - 用户选择昵称或输入邀请码
 - 每天上传运动截图
-- 客户端先压缩图片，再通过 Vercel Blob Client Upload 上传
-- 上传后进入确认页，确认或修改 OCR mock 结果
+- 客户端先压缩图片，再上传到飞书多维表格附件字段
+- 飞书多维表格 OCR / 智能提取字段写入 `ocr_*` 结果后，前端进入确认页
 - 点击确认后才写入飞书多维表格
 - 首页展示今日排行榜、本周排行榜、连续打卡榜
 - 个人页展示步数、热量、体重趋势
@@ -22,6 +22,8 @@ app/
     blob/route.ts
     dashboard/route.ts
     ocr/route.ts
+    ocr/start/route.ts
+    ocr/status/route.ts
     participants/route.ts
     profile/[userId]/route.ts
     records/route.ts
@@ -52,7 +54,7 @@ public/
 
 ## 飞书字段
 
-请在飞书多维表格中创建字段：
+`daily_records` 表需要这些字段：
 
 ```txt
 record_key
@@ -73,9 +75,20 @@ is_makeup
 risk_flags
 admin_status
 created_at
+updated_at
+screenshot_attachment
+ocr_status
+ocr_steps
+ocr_calories
+ocr_duration_min
+ocr_distance_km
+ocr_weight
+ocr_date
+ocr_device_source
 ```
 
 `admin_status` 建议设为单选：`正常`、`已修正`、`剔除`。
+`screenshot_attachment` 是附件字段。飞书 OCR / 智能提取需要在多维表格里配置为读取这个附件字段，并把结果写入 `ocr_*` 字段。
 
 ## 环境变量
 
@@ -92,7 +105,7 @@ FEISHU_APP_ID=cli_a96d9aaaf17bdcb3
 FEISHU_APP_SECRET=你的飞书 app secret
 FEISHU_APP_TOKEN=飞书多维表格 app_token
 FEISHU_TABLE_ID=飞书 table_id
-BLOB_READ_WRITE_TOKEN=Vercel Blob Read Write Token
+BLOB_READ_WRITE_TOKEN=Vercel Blob Read Write Token，可选备用
 INVITE_CODE=邀请码
 USE_MOCK_FEISHU=false
 ```
@@ -134,15 +147,13 @@ git push -u origin main
    - `FEISHU_APP_SECRET`
    - `FEISHU_APP_TOKEN`
    - `FEISHU_TABLE_ID`
-   - `BLOB_READ_WRITE_TOKEN`
+   - `BLOB_READ_WRITE_TOKEN` 可选，仅作为 Vercel Blob 备用上传链路
    - `INVITE_CODE`
    - `USE_MOCK_FEISHU=false`
-6. 在 Vercel Storage 创建 Blob Store。
-7. 复制 Blob Read Write Token 到 `BLOB_READ_WRITE_TOKEN`。
-8. Deploy。
+6. Deploy。
 
 ## 安全说明
 
-- 飞书 app secret 和 Vercel Blob token 只在服务端环境变量中使用。
-- 前端只调用 `/api/blob` 获取短期上传授权，不会暴露 Blob token。
-- 真实 OCR 暂未接入，当前使用 `lib/mockOcr.ts`。
+- 飞书 app secret 只在服务端环境变量中使用。
+- 截图优先写入飞书多维表格附件字段。
+- 本地 `USE_MOCK_FEISHU=true` 时仍会使用 `lib/mockOcr.ts` 生成测试数据。

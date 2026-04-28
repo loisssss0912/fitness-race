@@ -4,7 +4,7 @@ import { CheckCircle2, ImagePlus, Loader2, Save } from 'lucide-react';
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { compressImage } from '@/lib/clientImage';
 import { participants as defaultParticipants } from '@/lib/users';
-import type { OcrDraft, Participant, WorkoutRecord } from '@/types/workout';
+import type { OcrDraft, OcrStartResponse, OcrStatusResponse, Participant, WorkoutRecord } from '@/types/workout';
 
 async function readJson<T>(response: Response, fallbackMessage: string): Promise<T> {
   const text = await response.text();
@@ -24,6 +24,7 @@ export default function UploadClient() {
   const [preview, setPreview] = useState('');
   const [draft, setDraft] = useState<OcrDraft | null>(null);
   const [loading, setLoading] = useState(false);
+  const [ocrMessage, setOcrMessage] = useState('');
   const [saved, setSaved] = useState<WorkoutRecord | null>(null);
   const [error, setError] = useState('');
 
@@ -50,6 +51,7 @@ export default function UploadClient() {
     const file = event.target.files?.[0];
     if (!file) return;
     setLoading(true);
+    setOcrMessage('正在上传到飞书多维表格...');
     setError('');
     setSaved(null);
     try {
@@ -57,16 +59,31 @@ export default function UploadClient() {
       setPreview(URL.createObjectURL(compressed));
       const formData = new FormData();
       formData.append('file', compressed);
-      const blob = await fetch('/api/blob/server', {
+      formData.append('user_id', userId);
+      formData.append('nickname', nickname);
+      const started = await fetch('/api/ocr/start', {
         method: 'POST',
         body: formData
-      }).then((res) => readJson<{ url: string }>(res, '图片上传失败'));
-      const ocr = await fetch('/api/ocr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blobUrl: blob.url, user_id: userId, nickname })
-      }).then((res) => readJson<OcrDraft>(res, 'OCR 识别失败'));
-      setDraft(ocr);
+      }).then((res) => readJson<OcrStartResponse>(res, '图片上传到飞书失败'));
+
+      if (started.draft) {
+        setDraft(started.draft);
+        setOcrMessage('');
+        return;
+      }
+
+      setOcrMessage('飞书 OCR 识别中，通常需要几秒到十几秒...');
+      for (let index = 0; index < 20; index += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 2500));
+        const status = await fetch(`/api/ocr/status?recordId=${started.recordId}`).then((res) => readJson<OcrStatusResponse>(res, '读取 OCR 状态失败'));
+        if (status.status === 'ready' && status.draft) {
+          setDraft(status.draft);
+          setOcrMessage('');
+          return;
+        }
+        if (status.status === 'failed') throw new Error(status.message || '飞书 OCR 识别失败');
+      }
+      throw new Error('飞书 OCR 暂未返回结果。请确认多维表格里已把 screenshot_attachment 配置为 OCR/智能提取来源，并把结果写入 ocr_* 字段。');
     } catch (err) {
       setError(err instanceof Error ? err.message : '上传失败');
     } finally {
@@ -113,12 +130,12 @@ export default function UploadClient() {
             <>
               <div className="mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-white/10 text-ocean ring-1 ring-white/10"><ImagePlus size={30} /></div>
               <p className="text-lg font-black">选择运动截图</p>
-              <p className="mt-2 text-sm text-white/50">图片会先压缩，再上传到 Vercel Blob。</p>
+              <p className="mt-2 text-sm text-white/50">图片会先压缩，再上传到飞书附件字段等待 OCR。</p>
             </>
           )}
           <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
         </label>
-        {loading && <p className="mt-4 flex items-center gap-2 text-ocean"><Loader2 className="animate-spin" size={18} />处理中</p>}
+        {loading && <p className="mt-4 flex items-center gap-2 text-ocean"><Loader2 className="animate-spin" size={18} />{ocrMessage || '处理中'}</p>}
         {error && <p className="mt-4 rounded-2xl bg-red-500/12 p-4 text-red-300">{error}</p>}
       </section>
 

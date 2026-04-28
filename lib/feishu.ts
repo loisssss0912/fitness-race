@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { mockStore } from './mockStore';
-import type { WorkoutRecord } from '@/types/workout';
+import { todayInShanghai } from './dates';
+import type { OcrDraft, WorkoutRecord } from '@/types/workout';
 
 const config = {
   appId: process.env.FEISHU_APP_ID,
@@ -32,13 +33,21 @@ async function getTenantAccessToken() {
   return cachedToken.value;
 }
 
-async function feishuRequest<T>(method: 'get' | 'post', path: string, data?: unknown) {
+async function feishuRequest<T>(method: 'get' | 'post' | 'patch', path: string, data?: unknown) {
   const token = await getTenantAccessToken();
   const response = await axios.request<T>({
     method,
     url: `https://open.feishu.cn/open-apis${path}`,
     headers: { Authorization: `Bearer ${token}` },
     data
+  });
+  return response.data;
+}
+
+async function feishuUpload<T>(path: string, formData: FormData) {
+  const token = await getTenantAccessToken();
+  const response = await axios.post<T>(`https://open.feishu.cn/open-apis${path}`, formData, {
+    headers: { Authorization: `Bearer ${token}` }
   });
   return response.data;
 }
@@ -105,29 +114,69 @@ function toFields(record: WorkoutRecord) {
   };
 }
 
+function toConfirmFields(record: WorkoutRecord) {
+  return toFields(record);
+}
+
+function textField(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((item) => {
+      if (typeof item === 'string') return item;
+      if (item && typeof item === 'object' && 'text' in item) return String(item.text);
+      return String(item);
+    }).join('');
+  }
+  return String(value ?? '');
+}
+
 function fromFeishuRecord(item: { record_id: string; fields: Record<string, unknown> }): WorkoutRecord {
   const f = item.fields;
   const riskFlags = parseRiskFlags(f.risk_flags);
   return {
     id: item.record_id,
-    record_key: String(f.record_key ?? ''),
-    user_id: String(f.user_id ?? ''),
-    nickname: String(f.nickname ?? ''),
+    record_key: textField(f.record_key),
+    user_id: textField(f.user_id),
+    nickname: textField(f.nickname),
     date: timestampToDate(f.date),
-    device_source: String(f.device_source ?? ''),
+    device_source: textField(f.device_source),
     steps: Number(f.steps ?? 0),
     calories: Number(f.calories ?? 0),
     duration_min: Number(f.duration_min ?? 0),
     distance_km: Number(f.distance_km ?? 0),
     weight: f.weight === undefined || f.weight === null || f.weight === '' ? null : Number(f.weight),
     score: Number(f.score ?? 0),
-    screenshot_url: String(f.screenshot_url ?? ''),
-    raw_ocr_text: String(f.raw_ocr_text ?? ''),
+    screenshot_url: textField(f.screenshot_url),
+    raw_ocr_text: textField(f.raw_ocr_text),
     confirmed: Boolean(f.confirmed),
     is_makeup: Boolean(f.is_makeup),
     risk_flags: riskFlags,
     admin_status: String(f.admin_status ?? '正常') as WorkoutRecord['admin_status'],
     created_at: timestampToISOString(f.created_at)
+  };
+}
+
+function ocrDraftFromFields(recordId: string, fields: Record<string, unknown>): OcrDraft | null {
+  const steps = Number(fields.ocr_steps ?? fields.steps ?? 0);
+  const calories = Number(fields.ocr_calories ?? fields.calories ?? 0);
+  const duration = Number(fields.ocr_duration_min ?? fields.duration_min ?? 0);
+  const distance = Number(fields.ocr_distance_km ?? fields.distance_km ?? 0);
+  const hasCoreMetrics = steps > 0 || calories > 0 || duration > 0 || distance > 0;
+  if (!hasCoreMetrics) return null;
+
+  return {
+    draft_record_id: recordId,
+    user_id: textField(fields.user_id),
+    nickname: textField(fields.nickname),
+    date: timestampToDate(fields.ocr_date ?? fields.date) || todayInShanghai(),
+    device_source: textField(fields.ocr_device_source ?? fields.device_source) || '其他',
+    steps,
+    calories,
+    duration_min: duration,
+    distance_km: distance,
+    weight: fields.ocr_weight === undefined || fields.ocr_weight === null || fields.ocr_weight === '' ? null : Number(fields.ocr_weight),
+    screenshot_url: textField(fields.screenshot_url),
+    raw_ocr_text: textField(fields.raw_ocr_text),
+    ocr_status: textField(fields.ocr_status) === '识别失败' ? '识别失败' : '已识别'
   };
 }
 
@@ -174,6 +223,102 @@ export const feishu = {
 
     if (result.code !== 0) throw new Error(`Feishu create record error: ${result.msg || result.code}`);
     return { ...record, id: result.data.record.record_id };
+  },
+
+  async updateRecord(recordId: string, record: WorkoutRecord) {
+    if (useMock) return mockStore.createRecord({ ...record, id: recordId });
+
+    const result = await feishuRequest<{ code: number; msg?: string; data: { record: { record_id: string } } }>(
+      'patch',
+      `/bitable/v1/apps/${config.appToken}/tables/${config.tableId}/records/${recordId}`,
+      { fields: toConfirmFields(record) }
+    );
+
+    if (result.code !== 0) throw new Error(`Feishu update record error: ${result.msg || result.code}`);
+    return { ...record, id: result.data.record.record_id };
+  },
+
+  async getRecord(recordId: string) {
+    const result = await feishuRequest<{
+      code: number;
+      msg?: string;
+      data: { record?: { record_id: string; fields: Record<string, unknown> }; item?: { record_id: string; fields: Record<string, unknown> } };
+    }>('get', `/bitable/v1/apps/${config.appToken}/tables/${config.tableId}/records/${recordId}`);
+
+    if (result.code !== 0) throw new Error(`Feishu get record error: ${result.msg || result.code}`);
+    return result.data.record ?? result.data.item ?? null;
+  },
+
+  async uploadMedia(file: File) {
+    const buffer = await file.arrayBuffer();
+    const formData = new FormData();
+    formData.append('file_name', file.name);
+    formData.append('parent_type', 'bitable_image');
+    formData.append('parent_node', config.appToken ?? '');
+    formData.append('size', String(file.size));
+    formData.append('file', new Blob([buffer], { type: file.type || 'application/octet-stream' }), file.name);
+
+    const result = await feishuUpload<{ code: number; msg?: string; data?: { file_token?: string } }>(
+      '/drive/v1/medias/upload_all',
+      formData
+    );
+
+    if (result.code !== 0 || !result.data?.file_token) throw new Error(`Feishu upload media error: ${result.msg || result.code}`);
+    return result.data.file_token;
+  },
+
+  async createOcrDraft(input: { user_id: string; nickname: string; file: File }) {
+    if (useMock) {
+      return {
+        recordId: `mock_${Date.now()}`,
+        status: 'mock'
+      };
+    }
+
+    const fileToken = await this.uploadMedia(input.file);
+    const now = new Date().toISOString();
+    const today = todayInShanghai();
+    const fields = {
+      record_key: `draft_${input.user_id}_${Date.now()}`,
+      user_id: input.user_id,
+      nickname: input.nickname,
+      date: dateToTimestamp(today),
+      submit_date: dateToTimestamp(today),
+      screenshot_attachment: [{ file_token: fileToken, name: input.file.name }],
+      screenshot_url: '',
+      raw_ocr_text: '等待飞书 OCR 字段识别附件',
+      confirmed: false,
+      is_makeup: false,
+      risk_flags: [],
+      risk_level: '待确认',
+      admin_status: '正常',
+      ocr_status: '待识别',
+      created_at: dateTimeToTimestamp(now),
+      updated_at: dateTimeToTimestamp(now)
+    };
+
+    const result = await feishuRequest<{ code: number; msg?: string; data: { record: { record_id: string } } }>(
+      'post',
+      `/bitable/v1/apps/${config.appToken}/tables/${config.tableId}/records`,
+      { fields }
+    );
+
+    if (result.code !== 0) throw new Error(`Feishu create OCR draft error: ${result.msg || result.code}`);
+    return { recordId: result.data.record.record_id, status: 'pending' };
+  },
+
+  async getOcrDraft(recordId: string) {
+    if (useMock) return null;
+
+    const record = await this.getRecord(recordId);
+    if (!record) return { status: 'failed' as const, message: '找不到飞书记录。' };
+
+    const status = textField(record.fields.ocr_status);
+    if (status === '识别失败') return { status: 'failed' as const, message: textField(record.fields.raw_ocr_text) || '飞书 OCR 识别失败。' };
+
+    const draft = ocrDraftFromFields(record.record_id, record.fields);
+    if (!draft) return { status: 'pending' as const, message: '等待飞书 OCR 字段写入识别结果。' };
+    return { status: 'ready' as const, draft };
   },
 
   async findByRecordKey(recordKey: string) {
