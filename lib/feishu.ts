@@ -33,7 +33,7 @@ async function getTenantAccessToken() {
   return cachedToken.value;
 }
 
-async function feishuRequest<T>(method: 'get' | 'post' | 'patch', path: string, data?: unknown) {
+async function feishuRequest<T>(method: 'get' | 'post' | 'put', path: string, data?: unknown) {
   const token = await getTenantAccessToken();
   const response = await axios.request<T>({
     method,
@@ -287,7 +287,7 @@ export const feishu = {
     if (useMock) return mockStore.createRecord({ ...record, id: recordId });
 
     const result = await feishuRequest<{ code: number; msg?: string; data: { record: { record_id: string } } }>(
-      'patch',
+      'put',
       `/bitable/v1/apps/${config.appToken}/tables/${config.tableId}/records/${recordId}`,
       { fields: toConfirmFields(record) }
     );

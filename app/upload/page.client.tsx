@@ -101,10 +101,24 @@ export default function UploadClient() {
     setLoading(true);
     setError('');
     try {
+      const payload: OcrDraft = {
+        draft_record_id: draft.draft_record_id,
+        user_id: draft.user_id,
+        nickname: draft.nickname,
+        date: draft.date,
+        device_source: draft.device_source,
+        steps: Number(draft.steps),
+        calories: Number(draft.calories),
+        duration_min: Number(draft.duration_min),
+        distance_km: Number(draft.distance_km),
+        weight: draft.weight === null || draft.weight === undefined ? null : Number(draft.weight),
+        screenshot_url: draft.screenshot_url ?? '',
+        raw_ocr_text: draft.raw_ocr_text ?? ''
+      };
       const response = await fetch('/api/records/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draft)
+        body: JSON.stringify(payload)
       });
       const json = await readJson<WorkoutRecord>(response, '提交失败');
       setSaved(json);
