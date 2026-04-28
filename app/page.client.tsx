@@ -132,23 +132,7 @@ export default function DashboardClient() {
       <section className="grid gap-5 lg:grid-cols-3">
         <Ranking title="今日排行榜" records={data?.todayRanking ?? []} />
         <Ranking title="本周排行榜" records={data?.weekRanking ?? []} />
-        <section className="panel p-5">
-          <h2 className="mb-4 text-lg font-black text-white">连续打卡榜</h2>
-          <div className="space-y-3">
-            {(data?.streakRanking ?? []).map((item, index) => (
-              <div key={item.user_id} className="flex items-center justify-between rounded-3xl border border-white/10 bg-white/7 p-3">
-                <div className="flex items-center gap-3">
-                  <UserAvatar name={item.nickname} index={index} size="sm" />
-                  <div>
-                    <p className="font-black">{item.nickname}</p>
-                    <p className="text-xs text-white/45">{item.user_id}</p>
-                  </div>
-                </div>
-                <p className="text-xl font-black text-mint">{item.streak} 天</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        <Ranking title="累计排行榜" records={data?.weekRanking ?? []} />
       </section>
     </div>
   );
