@@ -73,22 +73,16 @@ raw_ocr_text
 confirmed
 is_makeup
 risk_flags
+risk_level
 admin_status
+admin_note
 created_at
 updated_at
 screenshot_attachment
-ocr_status
-ocr_steps
-ocr_calories
-ocr_duration_min
-ocr_distance_km
-ocr_weight
-ocr_date
-ocr_device_source
 ```
 
 `admin_status` 建议设为单选：`正常`、`已修正`、`剔除`。
-`screenshot_attachment` 是附件字段。推荐把 `raw_ocr_text` 配成飞书「AI 图片理解」字段，原图引用 `screenshot_attachment`，并要求只返回 JSON。`ocr_*` 字段可以保留；如果为空，应用会自动从 `raw_ocr_text` 的 JSON 中解析。
+`screenshot_attachment` 是附件字段。推荐把 `raw_ocr_text` 配成飞书「AI 图片理解」字段，原图引用 `screenshot_attachment`，并要求只返回 JSON。应用只从 `raw_ocr_text` 解析识别结果，不再需要额外的 `ocr_*` 字段。
 
 `raw_ocr_text` 推荐提示词：
 

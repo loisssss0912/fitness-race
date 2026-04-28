@@ -215,10 +215,10 @@ function fromFeishuRecord(item: { record_id: string; fields: Record<string, unkn
 
 function ocrDraftFromFields(recordId: string, fields: Record<string, unknown>): OcrDraft | null {
   const rawJson = parseRawOcrJson(fields.raw_ocr_text);
-  const steps = numberField(fields.ocr_steps, numberField(rawJson?.steps, numberField(fields.steps)));
-  const calories = numberField(fields.ocr_calories, numberField(rawJson?.calories, numberField(fields.calories)));
-  const duration = numberField(fields.ocr_duration_min, numberField(rawJson?.duration_min, numberField(fields.duration_min)));
-  const distance = numberField(fields.ocr_distance_km, numberField(rawJson?.distance_km, numberField(fields.distance_km)));
+  const steps = numberField(rawJson?.steps, numberField(fields.steps));
+  const calories = numberField(rawJson?.calories, numberField(fields.calories));
+  const duration = numberField(rawJson?.duration_min, numberField(fields.duration_min));
+  const distance = numberField(rawJson?.distance_km, numberField(fields.distance_km));
   const hasCoreMetrics = steps > 0 || calories > 0 || duration > 0 || distance > 0;
   if (!hasCoreMetrics) return null;
 
@@ -226,16 +226,15 @@ function ocrDraftFromFields(recordId: string, fields: Record<string, unknown>): 
     draft_record_id: recordId,
     user_id: textField(fields.user_id),
     nickname: textField(fields.nickname),
-    date: firstText(timestampToDate(fields.ocr_date ?? fields.date), rawJson?.date, todayInShanghai()),
-    device_source: firstText(fields.ocr_device_source, rawJson?.device_source, fields.device_source, '其他'),
+    date: firstText(rawJson?.date, timestampToDate(fields.date), todayInShanghai()),
+    device_source: firstText(rawJson?.device_source, fields.device_source, '其他'),
     steps,
     calories,
     duration_min: duration,
     distance_km: distance,
-    weight: nullableNumberField(fields.ocr_weight) ?? nullableNumberField(rawJson?.weight) ?? nullableNumberField(fields.weight),
+    weight: nullableNumberField(rawJson?.weight) ?? nullableNumberField(fields.weight),
     screenshot_url: textField(fields.screenshot_url),
-    raw_ocr_text: textField(fields.raw_ocr_text),
-    ocr_status: textField(fields.ocr_status) === '识别失败' ? '识别失败' : '已识别'
+    raw_ocr_text: textField(fields.raw_ocr_text)
   };
 }
 
@@ -349,7 +348,6 @@ export const feishu = {
       risk_flags: [],
       risk_level: '待确认',
       admin_status: '正常',
-      ocr_status: '待识别',
       created_at: dateTimeToTimestamp(now),
       updated_at: dateTimeToTimestamp(now)
     };
@@ -369,9 +367,6 @@ export const feishu = {
 
     const record = await this.getRecord(recordId);
     if (!record) return { status: 'failed' as const, message: '找不到飞书记录。' };
-
-    const status = textField(record.fields.ocr_status);
-    if (status === '识别失败') return { status: 'failed' as const, message: textField(record.fields.raw_ocr_text) || '飞书 OCR 识别失败。' };
 
     const draft = ocrDraftFromFields(record.record_id, record.fields);
     if (!draft) return { status: 'pending' as const, message: '等待飞书 OCR 字段写入识别结果。' };

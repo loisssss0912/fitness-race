@@ -32,7 +32,6 @@ export type OcrDraft = Omit<
   'id' | 'record_key' | 'score' | 'confirmed' | 'is_makeup' | 'risk_flags' | 'admin_status' | 'created_at'
 > & {
   draft_record_id?: string;
-  ocr_status?: '待识别' | '已识别' | '识别失败' | 'mock';
 };
 
 export type OcrStartResponse = {
