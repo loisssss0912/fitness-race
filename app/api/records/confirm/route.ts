@@ -22,29 +22,35 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const input = schema.parse(await request.json());
-  const recordKey = makeRecordKey(input.user_id, input.date);
-  const existing = await feishu.findByRecordKey(recordKey);
+  try {
+    const input = schema.parse(await request.json());
+    const recordKey = makeRecordKey(input.user_id, input.date);
+    const existing = await feishu.findByRecordKey(recordKey);
 
-  if (existing && existing.id !== input.draft_record_id) {
-    return NextResponse.json({ message: '今天已经提交过，不能重复提交。', existing }, { status: 409 });
+    if (existing && existing.id !== input.draft_record_id) {
+      return NextResponse.json({ message: '今天已经提交过，不能重复提交。', existing }, { status: 409 });
+    }
+
+    const previousRecord = await feishu.latestValidRecord(input.user_id, input.date);
+    const record: WorkoutRecord = {
+      ...input,
+      record_key: recordKey,
+      weight: input.weight ?? null,
+      score: calculateScore({ ...input, confirmed: true }),
+      confirmed: true,
+      is_makeup: input.date < todayInShanghai(),
+      risk_flags: getRiskFlags({ ...input, previousRecord }),
+      admin_status: '正常',
+      created_at: new Date().toISOString()
+    };
+
+    const saved = input.draft_record_id
+      ? await feishu.updateRecord(input.draft_record_id, record)
+      : await feishu.createRecord(record);
+    return NextResponse.json(saved, { status: 201 });
+  } catch (error) {
+    console.error('Confirm record failed', error);
+    const message = error instanceof Error ? error.message : '提交失败';
+    return NextResponse.json({ message }, { status: 500 });
   }
-
-  const previousRecord = await feishu.latestValidRecord(input.user_id, input.date);
-  const record: WorkoutRecord = {
-    ...input,
-    record_key: recordKey,
-    weight: input.weight ?? null,
-    score: calculateScore({ ...input, confirmed: true }),
-    confirmed: true,
-    is_makeup: input.date < todayInShanghai(),
-    risk_flags: getRiskFlags({ ...input, previousRecord }),
-    admin_status: '正常',
-    created_at: new Date().toISOString()
-  };
-
-  const saved = input.draft_record_id
-    ? await feishu.updateRecord(input.draft_record_id, record)
-    : await feishu.createRecord(record);
-  return NextResponse.json(saved, { status: 201 });
 }
